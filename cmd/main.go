@@ -5,14 +5,21 @@ import (
 
 	"github.com/RyabovNick/finviz_parser/internal/insider"
 	"github.com/RyabovNick/finviz_parser/internal/store"
+	"github.com/RyabovNick/finviz_parser/internal/telegram"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		panic(err)
+	}
+
 	ctx := context.Background()
 
 	db, err := store.New(store.Options{
-		Host:     "postgres-finviz-parse:5432",
+		Host:     "localhost:5432",
 		Database: "test",
 		Username: "postgres",
 		Password: "pass",
@@ -24,6 +31,11 @@ func main() {
 	}
 	defer db.Close()
 
+	telegram, err := telegram.New(telegram.ParseTelegramConfig(), db)
+	if err != nil {
+		panic(err)
+	}
+
 	b := insider.New(db)
 	txs, err := b.LastDayTransaction()
 	if err != nil {
@@ -31,6 +43,10 @@ func main() {
 	}
 
 	if err := b.Save(ctx, txs); err != nil {
+		panic(err)
+	}
+
+	if err := telegram.Publish(ctx); err != nil {
 		panic(err)
 	}
 }

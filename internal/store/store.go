@@ -179,7 +179,7 @@ func (s *Store) TopBuy(ctx context.Context) ([]insider.TotalTransaction, error) 
 		FROM sale
 		FULL OUTER JOIN buy ON sale.ticker = buy.ticker
 		ORDER BY total_value DESC
-		LIMIT 10;
+		LIMIT 20;
 	`); err != nil {
 		return nil, fmt.Errorf("failed select top sell: %w", err)
 	}
@@ -210,7 +210,7 @@ func (s *Store) TopSell(ctx context.Context) ([]insider.TotalTransaction, error)
 		FROM sale
 		FULL OUTER JOIN buy ON sale.ticker = buy.ticker
 		ORDER BY total_value ASC
-		LIMIT 10;
+		LIMIT 20;
 	`); err != nil {
 		return nil, fmt.Errorf("failed select top sell: %w", err)
 	}

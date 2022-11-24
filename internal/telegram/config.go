@@ -11,7 +11,7 @@ type Config struct {
 	Chat  int64
 }
 
-func parseTelegramConfig() Config {
+func ParseTelegramConfig() Config {
 	token := os.Getenv("TG_TOKEN")
 	if token == "" {
 		log.Fatal("ENV: TG_TOKEN not found")
