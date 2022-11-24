@@ -1,0 +1,83 @@
+version: '2.4'
+services:
+  postgres:
+    image: postgres:15.1
+    profiles: [ 'db' ]
+    container_name: postgres-finviz-parse
+    volumes:
+      - finviz:/var/lib/postgresql/data
+
+    ports:
+      - 5432:5432
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '100m'
+        max-file: '5'
+
+    environment:
+      - POSTGRES_DB=test
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=pass
+
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: migrate/migrate:v4.10.0
+    profiles: [ 'db' ]
+    container_name: migrate-finviz-parse
+    volumes:
+      - ./migrations:/migrations
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+    command:
+      [
+        '-path',
+        '/migrations',
+        '-database',
+        'postgres://postgres-finviz-parse:5432/test?user=postgres&password=pass&sslmode=disable',
+        'up'
+      ]
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  finviz:
+    build:
+      context: .
+
+    image: finviz:dev
+    profiles: [ 'app' ]
+    container_name: finviz-dev
+    hostname: finviz-dev
+
+    ports:
+      - 8080:8080
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+    environment:
+      - DEBUG=true
+      - PG_HOST=postgres-finviz-parse:5432
+      - PG_DATABASE=test
+      - PG_USERNAME=postgres
+      - PG_PASSWORD=pass
+      - PG_POOL_MAX_CONNS=10
+      - PG_POOL_MIN_CONNS=2
+volumes:
+  finviz:
