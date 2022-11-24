@@ -9,6 +9,10 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const (
+	HTML = "HTML"
+)
+
 type Storer interface {
 	TransactionTypeCount(ctx context.Context) ([]insider.TransactionTypeCount, error)
 	TopBuy(ctx context.Context) ([]insider.TotalTransaction, error)
@@ -56,14 +60,19 @@ func (c *Connection) transactionTypeCount(ctx context.Context) error {
 		return fmt.Errorf("error getting transaction type count: %w", err)
 	}
 
+	if len(tt) == 0 {
+		return fmt.Errorf("transaction type count is empty")
+	}
+
 	text := make([]string, 0, len(tt)+1)
-	text = append(text, "Transaction count and total_value (in $):")
+	text = append(text, "<b>Transaction count and total_value (in $):</b>")
 
 	for _, t := range tt {
 		text = append(text, fmt.Sprintf("%s: %d (%.0f)", t.Transaction, t.TransactionCount, t.TotalValue))
 	}
 
 	msg := tgbotapi.NewMessage(c.Chat, strings.Join(text, "\n"))
+	msg.ParseMode = HTML
 
 	if _, err := c.Bot.Send(msg); err != nil {
 		return fmt.Errorf("error sending message: %w", err)
@@ -78,14 +87,19 @@ func (c *Connection) topBuy(ctx context.Context) error {
 		return fmt.Errorf("error getting transaction type count: %w", err)
 	}
 
+	if len(tt) == 0 {
+		return fmt.Errorf("top buy is empty")
+	}
+
 	text := make([]string, 0, len(tt)+1)
-	text = append(text, "Top 20 buy:")
+	text = append(text, "<b>Top 20 buy:</b>")
 
 	for _, t := range tt {
-		text = append(text, fmt.Sprintf("%s: %.0f", t.Ticker, t.TotalValue))
+		text = append(text, fmt.Sprintf("%s: %.0f", t.FinvizTicker(), t.TotalValue))
 	}
 
 	msg := tgbotapi.NewMessage(c.Chat, strings.Join(text, "\n"))
+	msg.ParseMode = HTML
 
 	if _, err := c.Bot.Send(msg); err != nil {
 		return fmt.Errorf("error sending message: %w", err)
@@ -100,14 +114,19 @@ func (c *Connection) topSell(ctx context.Context) error {
 		return fmt.Errorf("error getting transaction type count: %w", err)
 	}
 
+	if len(tt) == 0 {
+		return fmt.Errorf("top sell is empty")
+	}
+
 	text := make([]string, 0, len(tt)+1)
-	text = append(text, "Top 20 sell:")
+	text = append(text, "<b>Top 20 sell:</b>")
 
 	for _, t := range tt {
-		text = append(text, fmt.Sprintf("%s: %.0f", t.Ticker, t.TotalValue))
+		text = append(text, fmt.Sprintf("%s: %.0f", t.FinvizTicker(), t.TotalValue))
 	}
 
 	msg := tgbotapi.NewMessage(c.Chat, strings.Join(text, "\n"))
+	msg.ParseMode = HTML
 
 	if _, err := c.Bot.Send(msg); err != nil {
 		return fmt.Errorf("error sending message: %w", err)

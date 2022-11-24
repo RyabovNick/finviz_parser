@@ -121,6 +121,10 @@ type TotalTransaction struct {
 	TotalValue float64 `json:"total_value" db:"total_value"`
 }
 
+func (t TotalTransaction) FinvizTicker() string {
+	return fmt.Sprintf("<a href='https://finviz.com/quote.ashx?t=%s'>%s</a>", t.Ticker, t.Ticker)
+}
+
 func TransactionTypeToEnum(s string) TransactionType {
 	switch s {
 	case string(Buy):
