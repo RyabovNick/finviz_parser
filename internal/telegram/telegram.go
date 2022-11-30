@@ -10,13 +10,17 @@ import (
 )
 
 const (
-	HTML = "HTML"
+	ParseModeHTML = "HTML"
 )
 
 type Storer interface {
 	TransactionTypeCount(ctx context.Context) ([]insider.TransactionTypeCount, error)
+
 	TopBuy(ctx context.Context) ([]insider.TotalTransaction, error)
 	TopSell(ctx context.Context) ([]insider.TotalTransaction, error)
+
+	BuyTicker(ctx context.Context) (insider.Tickers, error)
+	SaleTicker(ctx context.Context) (insider.Tickers, error)
 }
 
 type Connection struct {
@@ -72,7 +76,7 @@ func (c *Connection) transactionTypeCount(ctx context.Context) error {
 	}
 
 	msg := tgbotapi.NewMessage(c.Chat, strings.Join(text, "\n"))
-	msg.ParseMode = HTML
+	msg.ParseMode = ParseModeHTML
 
 	if _, err := c.Bot.Send(msg); err != nil {
 		return fmt.Errorf("error sending message: %w", err)
@@ -91,15 +95,22 @@ func (c *Connection) topBuy(ctx context.Context) error {
 		return fmt.Errorf("top buy is empty")
 	}
 
-	text := make([]string, 0, len(tt)+1)
+	text := make([]string, 0, len(tt)+2)
 	text = append(text, "<b>Top 20 buy:</b>")
 
 	for _, t := range tt {
 		text = append(text, fmt.Sprintf("%s: %.0f", t.FinvizTicker(), t.TotalValue))
 	}
 
+	tick, err := c.store.BuyTicker(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting tickers: %w", err)
+	}
+
+	text = append(text, tick.Finviz())
+
 	msg := tgbotapi.NewMessage(c.Chat, strings.Join(text, "\n"))
-	msg.ParseMode = HTML
+	msg.ParseMode = ParseModeHTML
 
 	if _, err := c.Bot.Send(msg); err != nil {
 		return fmt.Errorf("error sending message: %w", err)
@@ -125,8 +136,15 @@ func (c *Connection) topSell(ctx context.Context) error {
 		text = append(text, fmt.Sprintf("%s: %.0f", t.FinvizTicker(), t.TotalValue))
 	}
 
+	tick, err := c.store.SaleTicker(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting tickers: %w", err)
+	}
+
+	text = append(text, tick.Finviz())
+
 	msg := tgbotapi.NewMessage(c.Chat, strings.Join(text, "\n"))
-	msg.ParseMode = HTML
+	msg.ParseMode = ParseModeHTML
 
 	if _, err := c.Bot.Send(msg); err != nil {
 		return fmt.Errorf("error sending message: %w", err)

@@ -125,6 +125,14 @@ func (t TotalTransaction) FinvizTicker() string {
 	return fmt.Sprintf("<a href='https://finviz.com/quote.ashx?t=%s'>%s</a>", t.Ticker, t.Ticker)
 }
 
+type Tickers []string
+
+func (t Tickers) Finviz() string {
+	tick := strings.Join(t, ",")
+	return fmt.Sprintf("<a href='https://finviz.com/screener.ashx?v=340&t=%s&o=ticker'>Open ALL in Finviz Screener</a>", tick)
+
+}
+
 func TransactionTypeToEnum(s string) TransactionType {
 	switch s {
 	case string(Buy):

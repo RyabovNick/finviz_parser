@@ -217,3 +217,31 @@ func (s *Store) TopSell(ctx context.Context) ([]insider.TotalTransaction, error)
 
 	return tc, nil
 }
+
+func (s *Store) SaleTicker(ctx context.Context) (insider.Tickers, error) {
+	var tc insider.Tickers
+	if err := s.db.SelectContext(ctx, &tc, `
+		SELECT DISTINCT ticker
+		FROM transactions
+		WHERE notification_date::date = current_date - 1
+			AND transaction_type = 'Sale';
+	`); err != nil {
+		return nil, fmt.Errorf("failed select sale ticker: %w", err)
+	}
+
+	return tc, nil
+}
+
+func (s *Store) BuyTicker(ctx context.Context) (insider.Tickers, error) {
+	var tc insider.Tickers
+	if err := s.db.SelectContext(ctx, &tc, `
+		SELECT DISTINCT ticker
+		FROM transactions
+		WHERE notification_date::date = current_date - 1
+			AND transaction_type = 'Buy';
+	`); err != nil {
+		return nil, fmt.Errorf("failed select buy ticker: %w", err)
+	}
+
+	return tc, nil
+}
