@@ -1,4 +1,4 @@
-FROM golang:1.19.3-alpine as build
+FROM golang:1.21.1-alpine as build
 
 ARG CGO_ENABLED=0
 ARG GOOS=linux
@@ -22,7 +22,7 @@ RUN apk add --no-cache --update tzdata && \
   rm -rf /var/cache/apk/*
 WORKDIR /app
 
-ENV MIGRATE_VERSION=4.10.0
+ENV MIGRATE_VERSION=4.16.2
 RUN wget https://github.com/golang-migrate/migrate/releases/download/v${MIGRATE_VERSION}/migrate.linux-amd64.tar.gz && \
   tar -xvzpf migrate.linux-amd64.tar.gz && \
   mv migrate.linux-amd64 migrate && \

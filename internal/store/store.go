@@ -9,7 +9,8 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/RyabovNick/finviz_parser/internal/insider"
-	"github.com/jmoiron/sqlx"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -35,42 +36,40 @@ func (o Options) String() string {
 		port = hp[1]
 	}
 
-	return fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s sslmode=disable", o.Host, port, o.Database, o.Username, o.Password)
+	return fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s sslmode=disable pool_min_conns=%d pool_max_conns=%d", o.Host, port, o.Database, o.Username, o.Password, o.MinPool, o.MaxPool)
 }
 
 type Store struct {
-	db *sqlx.DB
+	pool *pgxpool.Pool
 }
 
 // New creates connection.
-func New(o Options) (*Store, error) {
-	db, err := sqlx.Connect("pgx", o.String())
+func New(ctx context.Context, o Options) (*Store, error) {
+	pool, err := pgxpool.New(ctx, o.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed connection: %w", err)
 	}
-	db.SetMaxIdleConns(o.MinPool)
-	db.SetMaxOpenConns(o.MaxPool)
 
 	// ping
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
-	if err := db.PingContext(ctx); err != nil {
+	if err := pool.Ping(ctx); err != nil {
 		return nil, fmt.Errorf("failed ping: %w", err)
 	}
-	return &Store{db: db}, nil
+	return &Store{pool: pool}, nil
 }
 
-func (s *Store) Close() error {
-	return s.db.Close()
+func (s *Store) Close() {
+	s.pool.Close()
 }
 
 func (s *Store) lastParse(ctx context.Context) (time.Time, error) {
 	var t time.Time
-	if err := s.db.GetContext(ctx, &t, `
+	if err := s.pool.QueryRow(ctx, `
 		SELECT updated_at
 		FROM last_parse
 		WHERE id = 1;
-	`); err != nil {
+	`).Scan(&t); err != nil {
 		return time.Time{}, fmt.Errorf("failed select last parse: %w", err)
 	}
 
@@ -79,7 +78,7 @@ func (s *Store) lastParse(ctx context.Context) (time.Time, error) {
 
 // updateLastParse sets last parse as yesterday.
 func (s *Store) updateLastParse(ctx context.Context) error {
-	if _, err := s.db.ExecContext(ctx, `
+	if _, err := s.pool.Exec(ctx, `
 		UPDATE last_parse
 		SET updated_at = current_date - 1
 		WHERE id = 1;
@@ -115,7 +114,7 @@ func (s *Store) InsertTransactions(ctx context.Context, tr insider.Transactions)
 		return fmt.Errorf("candles insert to sql: %w", err)
 	}
 
-	if _, err := s.db.ExecContext(ctx, sql, args...); err != nil {
+	if _, err := s.pool.Exec(ctx, sql, args...); err != nil {
 		return fmt.Errorf("candles insert exec: %w", err)
 	}
 
@@ -127,14 +126,15 @@ func (s *Store) InsertTransactions(ctx context.Context, tr insider.Transactions)
 }
 
 func (s *Store) TransactionTypeCount(ctx context.Context) ([]insider.TransactionTypeCount, error) {
-	var tc []insider.TransactionTypeCount
-	if err := s.db.SelectContext(ctx, &tc, `
+	rows, _ := s.pool.Query(ctx, `
 		SELECT transaction_type, count(*) as transaction_count, sum(value) as total_value
 		FROM transactions
 		WHERE notification_date::date = current_date - 1
 		GROUP BY transaction_type
 		ORDER BY transaction_type;
-	`); err != nil {
+	`)
+	tc, err := pgx.CollectRows(rows, pgx.RowToStructByName[insider.TransactionTypeCount])
+	if err != nil {
 		return nil, fmt.Errorf("failed select transaction type count: %w", err)
 	}
 
@@ -142,23 +142,23 @@ func (s *Store) TransactionTypeCount(ctx context.Context) ([]insider.Transaction
 }
 
 func (s *Store) RelationshipCount(ctx context.Context) ([]insider.RelationshipCount, error) {
-	var tc []insider.RelationshipCount
-	if err := s.db.SelectContext(ctx, &tc, `
+	rows, _ := s.pool.Query(ctx, `
 		SELECT relationship, transaction_type, count(*) as transaction_count, sum(value) as total_value
 		FROM transactions
 		WHERE notification_date::date = current_date - 1
 		GROUP BY relationship, transaction_type
 		ORDER BY total_value DESC;
-	`); err != nil {
+	`)
+	rc, err := pgx.CollectRows(rows, pgx.RowToStructByName[insider.RelationshipCount])
+	if err != nil {
 		return nil, fmt.Errorf("failed select relationship count: %w", err)
 	}
 
-	return tc, nil
+	return rc, nil
 }
 
 func (s *Store) TopBuy(ctx context.Context) ([]insider.TotalTransaction, error) {
-	var tc []insider.TotalTransaction
-	if err := s.db.SelectContext(ctx, &tc, `
+	rows, _ := s.pool.Query(ctx, `
 		WITH sale AS (
 			SELECT ticker, sum(value) as total_value
 			FROM transactions
@@ -180,16 +180,17 @@ func (s *Store) TopBuy(ctx context.Context) ([]insider.TotalTransaction, error) 
 		FULL OUTER JOIN buy ON sale.ticker = buy.ticker
 		ORDER BY total_value DESC
 		LIMIT 20;
-	`); err != nil {
+	`)
+	tt, err := pgx.CollectRows(rows, pgx.RowToStructByName[insider.TotalTransaction])
+	if err != nil {
 		return nil, fmt.Errorf("failed select top sell: %w", err)
 	}
 
-	return tc, nil
+	return tt, nil
 }
 
 func (s *Store) TopSell(ctx context.Context) ([]insider.TotalTransaction, error) {
-	var tc []insider.TotalTransaction
-	if err := s.db.SelectContext(ctx, &tc, `
+	rows, _ := s.pool.Query(ctx, `
 		WITH sale AS (
 			SELECT ticker, sum(value) as total_value
 			FROM transactions
@@ -211,7 +212,9 @@ func (s *Store) TopSell(ctx context.Context) ([]insider.TotalTransaction, error)
 		FULL OUTER JOIN buy ON sale.ticker = buy.ticker
 		ORDER BY total_value ASC
 		LIMIT 20;
-	`); err != nil {
+	`)
+	tc, err := pgx.CollectRows(rows, pgx.RowToStructByName[insider.TotalTransaction])
+	if err != nil {
 		return nil, fmt.Errorf("failed select top sell: %w", err)
 	}
 
@@ -219,29 +222,31 @@ func (s *Store) TopSell(ctx context.Context) ([]insider.TotalTransaction, error)
 }
 
 func (s *Store) SaleTicker(ctx context.Context) (insider.Tickers, error) {
-	var tc insider.Tickers
-	if err := s.db.SelectContext(ctx, &tc, `
+	rows, _ := s.pool.Query(ctx, `
 		SELECT DISTINCT ticker
 		FROM transactions
 		WHERE notification_date::date = current_date - 1
 			AND transaction_type = 'Sale';
-	`); err != nil {
+	`)
+	t, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
 		return nil, fmt.Errorf("failed select sale ticker: %w", err)
 	}
 
-	return tc, nil
+	return t, nil
 }
 
 func (s *Store) BuyTicker(ctx context.Context) (insider.Tickers, error) {
-	var tc insider.Tickers
-	if err := s.db.SelectContext(ctx, &tc, `
+	rows, _ := s.pool.Query(ctx, `
 		SELECT DISTINCT ticker
 		FROM transactions
 		WHERE notification_date::date = current_date - 1
 			AND transaction_type = 'Buy';
-	`); err != nil {
+	`)
+	t, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
 		return nil, fmt.Errorf("failed select buy ticker: %w", err)
 	}
 
-	return tc, nil
+	return t, nil
 }

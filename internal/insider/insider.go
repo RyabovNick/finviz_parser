@@ -158,7 +158,7 @@ func (b *Browser) parse(url string) (Transactions, error) {
 	var insider []Transaction
 
 	c := colly.NewCollector()
-	c.OnHTML(".body-table > tbody > tr", func(e *colly.HTMLElement) {
+	c.OnHTML(".styled-table-new > tbody > tr", func(e *colly.HTMLElement) {
 		// skip the header
 		if e.Index == 0 {
 			return

@@ -6,7 +6,6 @@ import (
 	"github.com/RyabovNick/finviz_parser/internal/insider"
 	"github.com/RyabovNick/finviz_parser/internal/store"
 	"github.com/RyabovNick/finviz_parser/internal/telegram"
-	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/joho/godotenv"
 )
 
@@ -18,7 +17,7 @@ func main() {
 
 	ctx := context.Background()
 
-	db, err := store.New(store.Options{
+	db, err := store.New(ctx, store.Options{
 		Host:     "localhost:5432",
 		Database: "test",
 		Username: "postgres",
