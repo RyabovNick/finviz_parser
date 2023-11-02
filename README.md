@@ -6,9 +6,9 @@
 
 `crontab -e`
 
-add new row:
+add new row (we need `cd` to change working dir to find out .env file):
 
-`0 9 * * * /root/finviz_parser/finviz_parser`
+`0 9 * * * cd /root/finviz_parser && ./finviz_parser > /root/finviz_parser/log 2>&1`
 
 save and verify:
 
