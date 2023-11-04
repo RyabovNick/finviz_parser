@@ -19,9 +19,9 @@ func main() {
 
 	db, err := store.New(ctx, store.Options{
 		Host:     "localhost:5432",
-		Database: "test",
-		Username: "postgres",
-		Password: "pass",
+		Database: "finviz",
+		Username: "finviz",
+		Password: "finviz",
 		MaxPool:  10,
 		MinPool:  2,
 	})

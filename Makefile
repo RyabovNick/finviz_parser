@@ -8,16 +8,16 @@ dev-run:
 	go run ./cmd/main.go
 
 db-run:
-	docker-compose --profile db up -d
+	docker compose --profile db up -d
 
 app-run:
-	docker-compose --profile app up
+	docker compose --profile app up
 
 app-run-build:
-	docker-compose --profile app up --build
+	docker compose --profile app up --build
 
 down:
-	docker-compose down
+	docker compose down
 
 down-and-clear-all:
-	docker-compose down --remove-orphans
+	docker compose down --remove-orphans

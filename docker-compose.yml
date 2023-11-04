@@ -1,7 +1,8 @@
-version: '2.4'
+version: '2.3'
 services:
   postgres:
-    image: postgres:15.1
+    image: postgres:15
+    restart: always
     profiles: [ 'db' ]
     container_name: postgres-finviz-parse
     volumes:
@@ -17,12 +18,12 @@ services:
         max-file: '5'
 
     environment:
-      - POSTGRES_DB=test
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=finviz
+      - POSTGRES_USER=finviz
+      - POSTGRES_PASSWORD=finviz
 
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
+      test: [ 'CMD-SHELL', 'pg_isready -U finviz' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,7 +46,7 @@ services:
         '-path',
         '/migrations',
         '-database',
-        'postgres://postgres-finviz-parse:5432/test?user=postgres&password=pass&sslmode=disable',
+        'postgres://postgres-finviz-parse:5432/finviz?user=finviz&password=finviz&sslmode=disable',
         'up'
       ]
 
@@ -74,9 +75,9 @@ services:
     environment:
       - DEBUG=true
       - PG_HOST=postgres-finviz-parse:5432
-      - PG_DATABASE=test
-      - PG_USERNAME=postgres
-      - PG_PASSWORD=pass
+      - PG_DATABASE=finviz
+      - PG_USERNAME=finviz
+      - PG_PASSWORD=finviz
       - PG_POOL_MAX_CONNS=10
       - PG_POOL_MIN_CONNS=2
 volumes:
