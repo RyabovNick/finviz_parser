@@ -90,6 +90,10 @@ func (s *Store) updateLastParse(ctx context.Context) error {
 }
 
 func (s *Store) InsertTransactions(ctx context.Context, tr insider.Transactions) error {
+	if len(tr) == 0 {
+		return nil
+	}
+
 	lp, err := s.lastParse(ctx)
 	if err != nil {
 		return fmt.Errorf("failed get last parse: %w", err)
