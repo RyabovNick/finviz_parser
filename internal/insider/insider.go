@@ -166,37 +166,37 @@ func (b *Browser) parse(url string) (Transactions, error) {
 
 		date, err := time.Parse(insiderDateFormat, addYear(e.ChildText("td:nth-child(4)")))
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("date: %s", err)
 			return
 		}
 
 		secDate, err := time.Parse(insiderSECDateFormat, addYear(e.ChildText("td:nth-child(10)")))
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("secDate: %s", err)
 			return
 		}
 
 		cost, err := strconv.ParseFloat(e.ChildText("td:nth-child(6)"), 64)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("cost: %s", err)
 			return
 		}
 
 		shares, err := strconv.Atoi(removeComma(e.ChildText("td:nth-child(7)")))
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("shares: %s", err)
 			return
 		}
 
 		value, err := strconv.Atoi(removeComma(e.ChildText("td:nth-child(8)")))
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("value: %s", err)
 			return
 		}
 
 		sharesTotal, err := strconv.Atoi(removeComma(e.ChildText("td:nth-child(9)")))
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("sharesTotal: %s", err)
 			return
 		}
 
