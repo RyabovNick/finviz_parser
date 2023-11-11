@@ -6,6 +6,7 @@ package insider
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -49,12 +50,12 @@ func New(store Storer) *Browser {
 func (b *Browser) LastDayTransaction() (Transactions, error) {
 	txb, err := b.buyTransactions()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("buyTransactions: %w", err)
 	}
 
 	txs, err := b.sellTransactions()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("sellTransactions: %w", err)
 	}
 
 	return append(txb.lastDay(), txs.lastDay()...), nil
@@ -166,37 +167,37 @@ func (b *Browser) parse(url string) (Transactions, error) {
 
 		date, err := time.Parse(insiderDateFormat, addYear(e.ChildText("td:nth-child(4)")))
 		if err != nil {
-			fmt.Printf("date: %s", err)
+			log.Printf("date: %s", err)
 			return
 		}
 
 		secDate, err := time.Parse(insiderSECDateFormat, addYear(e.ChildText("td:nth-child(10)")))
 		if err != nil {
-			fmt.Printf("secDate: %s", err)
+			log.Printf("secDate: %s", err)
 			return
 		}
 
 		cost, err := strconv.ParseFloat(e.ChildText("td:nth-child(6)"), 64)
 		if err != nil {
-			fmt.Printf("cost: %s", err)
+			log.Printf("cost: %s", err)
 			return
 		}
 
 		shares, err := strconv.Atoi(removeComma(e.ChildText("td:nth-child(7)")))
 		if err != nil {
-			fmt.Printf("shares: %s", err)
+			log.Printf("shares: %s", err)
 			return
 		}
 
 		value, err := strconv.Atoi(removeComma(e.ChildText("td:nth-child(8)")))
 		if err != nil {
-			fmt.Printf("value: %s", err)
+			log.Printf("value: %s", err)
 			return
 		}
 
 		sharesTotal, err := strconv.Atoi(removeComma(e.ChildText("td:nth-child(9)")))
 		if err != nil {
-			fmt.Printf("sharesTotal: %s", err)
+			log.Printf("sharesTotal: %s", err)
 			return
 		}
 
