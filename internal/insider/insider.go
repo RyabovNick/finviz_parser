@@ -17,8 +17,8 @@ import (
 type TransactionType string
 
 const (
-	// Nov 21
-	insiderDateFormat = "Jan 2 2006"
+	// Jun 24 '24
+	insiderDateFormat = "Jan 2 '06"
 
 	// Nov 23 09:17 PM
 	insiderSECDateFormat = "Jan 2 3:04 PM 2006"
@@ -165,7 +165,7 @@ func (b *Browser) parse(url string) (Transactions, error) {
 			return
 		}
 
-		date, err := time.Parse(insiderDateFormat, addYear(e.ChildText("td:nth-child(4)")))
+		date, err := time.Parse(insiderDateFormat, e.ChildText("td:nth-child(4)"))
 		if err != nil {
 			log.Printf("date: %s", err)
 			return
